@@ -197,19 +197,17 @@ order by 1;
 
 ##### PRODUCT #####
 # 가장 많이 조회된 상품
--- TOP 5
 with most_view as
 (select product_id,
-    count(event_time) as view_cnt
+    count(user_id) as view_cnt
 from event.log
-where event_type= 'view'
+-- where event_type= 'view'
 group by 1
-order by 2 desc
-limit 5),
--- 이 상품들의 구매 횟수
+order by 2 desc),
+-- 상위 5개 상품들의 구매 횟수
 sold_cnt as
 (select product_id,
-	count(event_time) as pay_cnt
+	count(user_id) as pay_cnt
 from event.log
 where event_type= 'purchase'
 	and product_id in (select product_id
@@ -241,8 +239,22 @@ select distinct brand
 from event.log
 where product_id in (select product_id from low_5);
 
-# 월별 최다 판매 제품
--- 상품 월별 판매 수량 순위
+# 제품 월별 판매량 순위 TOP5
+with monthly_rnk as
+(select substr(event_time, 1, 7) as YM,
+	product_id,
+    count(user_id) as pay_cnt,
+    row_number() over(partition by substr(event_time, 1, 7) order by count(user_id) desc) as rnk
+from event.log
+where event_type= 'purchase'
+group by 1, 2)
+
+select *
+from monthly_rnk
+where rnk between 1 and 5;
+
+# 특정 제품을 구매한 고객이 구매한 상품
+-- 월별 판매 순위
 with monthly_rnk as
 (select substr(event_time, 1, 7) as YM,
 	product_id,
@@ -256,7 +268,6 @@ monthly_top as
 (select ym, product_id, pay_cnt
 from monthly_rnk
 where rnk= 1),
--- 이 상품들을 구매한 고객이 구매한 물품들?
 -- 이 상품들을 구매한 고객
 user_list as
 (select distinct user_id
@@ -272,7 +283,7 @@ where event_type= 'purchase'
 group by 1
 order by 2 desc;
 
-# 월별 최고 금액 판매 물품
+# 월별 판매 금액 순위 TOP5
 with monthly_rnk as
 (select substr(event_time, 1, 7) as YM,
 	product_id,
@@ -282,6 +293,6 @@ from event.log
 where event_type= 'purchase'
 group by 1, 2)
 
-select ym, product_id, rev
+select *
 from monthly_rnk
-where rnk= 1;
+where rnk between 1 and 5;
