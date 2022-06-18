@@ -52,7 +52,7 @@ limit 10;
 
 # 3. 국가별 재구매율 (연도별)
 select a.country,
-	count(distinct b.invoicedate)/ count(distinct a.invoicedate) as retention_rate
+	count(distinct b.customerid)/ count(distinct a.customerid) as retention_rate
 from
 (select country, customerid, invoicedate
 from challenge.final) as a
