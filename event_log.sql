@@ -296,3 +296,44 @@ group by 1, 2)
 select *
 from monthly_rnk
 where rnk between 1 and 5;
+
+# 브랜드별 제품 판매량, 수익
+select brand, -- 이름없는 브랜드가 많은 것 확인
+	count(user_id) as pay_cnt,
+    sum(price) as rev
+from event.log
+where event_type= 'purchase'
+group by 1
+order by 3 desc;
+
+# 코호트분석
+-- 고개별 첫 구매 일자 계산
+with first_order as
+(select user_id,
+	date(min(event_time)) as first_order
+from
+(select event_time,
+	user_id
+from event.log
+where event_type= 'purchase') as f
+group by 1)
+-- 코호트 그룹 별, 인덱스 별 유저 수 집계
+select cohort_group,
+	cohort_index,
+    count(distinct user_id) as user_cnt
+from
+(
+-- 코호트 인덱스 계산
+-- 코호트 그룹 생성
+select a.*,
+	b.first_order,
+    abs(timestampdiff(month, a.event_time, b.first_order)) as cohort_index,
+    date_format(b.first_order, '%Y%m') as cohort_group
+from
+(select event_time,
+	user_id
+from event.log
+where event_type= 'purchase') as a
+	left join first_order as b
+		on a.user_id= b.user_id) as f
+group by 1, 2;
